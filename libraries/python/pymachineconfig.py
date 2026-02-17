@@ -12,7 +12,8 @@ class MachineConfig:
     _config = {}
     _default = {}
 
-    def __init__(self, name="~/.config/PythonSCAD/PythonSCAD.json"):
+    # FIXME: ~/.config/PythonSCAD/
+    def __init__(self, name="PythonSCAD.json"):
         try:
             self._config = self.read_config(name)
             self._default = self.working_config(label="default")
@@ -20,7 +21,7 @@ class MachineConfig:
             pass
         return
 
-    def gen_tst_config(self, name="~/.config/PythonSCAD/PythonSCAD.json"):
+    def gen_tst_config(self, name="PythonSCAD.json"):
         # FIXME: this is just an expeerimental hack to get started.
 
         # FIXME:
@@ -103,14 +104,14 @@ class MachineConfig:
 
         return cfg
 
-    def read_config(self, name="~/.config/PythonSCAD/PythonSCAD.json"):
+    def read_config(self, name="PythonSCAD.json"):
         if '~' in name:
             name = name.replace('~',os.path.expanduser("~"))
         with open(name, 'r', encoding='utf-8') as f:
             cfg = json.loads(f.read())
             return cfg
         
-    def write_config(self, name="~/.config/PythonSCAD/PythonSCAD.json", config=None):
+    def write_config(self, name="PythonSCAD.json", config=None):
         if '~' in name:
             name = name.replace('~',os.path.expanduser("~"))
 
