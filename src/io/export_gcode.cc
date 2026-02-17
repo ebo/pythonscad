@@ -36,25 +36,35 @@
 #include "geometry/Polygon2d.h"
 #include "geometry/PolySet.h"
 
-int gnum_cached=-1;
-double x_cached=NAN;
-double y_cached=NAN;
-double feed_cached=NAN;
-double power_cached=NAN;
-
 void output_gcode_pars(std::ostream& output, int gnum, double x, double y, double feed, double power) {
-  if(gnum != -1 && gnum != gnum_cached) { output << "G" << gnum; }
-  if(!std::isnan(x) && x != x_cached) output << "X" << x;
-  if(!std::isnan(y) && y != y_cached) output << "Y" << y;
-  if(!std::isnan(feed) && feed != feed_cached) output << "F" << feed;
-  if(!std::isnan(power) && power != power_cached) output << "S" << power;
-  output << "\r\n";
+  static int gnum_cached=-1;
+  static double x_cached=NAN;
+  static double y_cached=NAN;
+  static double feed_cached=NAN;
+  static double power_cached=NAN;
 
-  gnum_cached = gnum;
-  x_cached = x;
-  y_cached = y;
-  feed_cached = feed;
-  power_cached = power;
+  if(gnum != -1 && gnum != gnum_cached) {
+    output << "G" << gnum;
+    gnum_cached = gnum;
+  }
+  if(!std::isnan(x) && x != x_cached) {
+    output << "X" << x;
+    x_cached = x;
+  }
+  if(!std::isnan(y) && y != y_cached) {
+    output << "Y" << y;
+    y_cached = y;
+  }
+  if(!std::isnan(feed) && feed != feed_cached) {
+    output << "F" << feed;
+    feed_cached = feed;
+  }
+  if(!std::isnan(power) && power != power_cached) {
+    output << "S" << power;
+    power_cached = power;
+  }
+
+  output << "\r\n";
 }
 
 static double color_to_parm(const Color4f color, const double max, const int pos, const int dynamic)
