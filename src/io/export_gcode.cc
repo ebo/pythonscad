@@ -43,6 +43,17 @@ void output_gcode_pars(std::ostream& output, int gnum, double x, double y, doubl
   static double feed_cached=NAN;
   static double power_cached=NAN;
 
+  if(gnum == -2) {
+    // reinitialize the cache
+    gnum_cached=-1;
+    x_cached=NAN;
+    y_cached=NAN;
+    feed_cached=NAN;
+    power_cached=NAN;
+
+    return;
+  }
+
   if(gnum != -1 && gnum != gnum_cached) {
     output << "G" << gnum;
     gnum_cached = gnum;
@@ -135,6 +146,9 @@ void export_gcode(const std::shared_ptr<const Geometry>& geom, std::ostream& out
 {
   setlocale(LC_NUMERIC, "C");  // Ensure radix is . (not ,) in output
   BoundingBox bbox = geom->getBoundingBox();
+
+  // reset the cached parameters
+  output_gcode_pars(output, -2, NAN, NAN, NAN, NAN);
 
   auto  options = exportInfo.optionsGcode;
   output << options->initCode << "\r\n";
