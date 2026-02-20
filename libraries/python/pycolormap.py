@@ -58,7 +58,7 @@ def reset_default_colormap():
 #   compatible string representation of the hex value starting with a
 #   '#'
 def colormap2str(key):
-    return "#{:X}".format(int(colormap(key)))
+    return "#{:06X}".format(int(colormap(key)))
 
 # colormap - return the working labled color hex value
 def colormap(key):
@@ -87,20 +87,23 @@ def set_colormap(key,val):
     Color_Table[key]["color"] = val
     return Color_Table[key]["color"]
 
-def gen_color(red=-1,green=-1,blue=-1,power=-1,feed=-1):
-    if (red!=-1 or green!=-1 or blue!=-1) and (power!=-1 or feed!=-1):
-        print("Error (gen_color): can only set either RGB or PF values.")
-        raise ValueError("Can only set either RGB or PF values.")
+def gen_color(power=-1,feed=-1):
     color = 0
-    if red   != -1: color |= (int(255.0*red) << 24)
-    if green != -1: color |= (int(255.0*green) << 16)
-    if blue  != -1: color |= (int(255.0*blue) << 8)
-    if power != -1: color |= (int(255.0*power) << 24)
-    if feed  != -1: color |= (int(255.0*feed) << 16)
+    power = int(power)
+    feed  = int(feed)
+    if power > 1000:
+        print("Error: cannot represent a power factor greater than 100.0%")
+    if feed > 65535:
+        print("Error: cannot represent a feed rate greater than 65535mm/min")
+
+    power = int(power/4)
+    if power != -1: color |= (power << 24)
+    if feed  != -1: color |= (feed << 8)
 
     return color
 
-def gen_color2str(red=-1,green=-1,blue=-1,power=-1,feed=-1):
-    color = gen_color(red,green,blue,power,feed)
+def gen_color2str(power=-1,feed=-1):
+    color = gen_color(power,feed)
     
-    return "#{:X}".format(color)
+    return "#{:06X}".format(color)
+
