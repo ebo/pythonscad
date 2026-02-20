@@ -15,51 +15,81 @@ class MachineConfig:
     def __init__(self, name="PythonSCAD.json"):
         try:
             self._config = self.read(name)
+            #cfg = self.gen_tst_config()
+            #self.write(config=cfg)
+
         except:
             pass
-        self._working = self.working_config(label="default")
+        self._working = self.gen_working(label="default")
         return
 
     def gen_color_table(self):
-        color_table = {
-            "label":"ColorTable",
-            "type":"ColorTable",
-            "property":{
-                "L00": {"power":1.0,"feed":1.0,"color":0x000000},
-                "L01": {"power":1.0,"feed":1.0,"color":0x0000FF},
-                "L02": {"power":1.0,"feed":1.0,"color":0xFF0000},
-                "L03": {"power":1.0,"feed":1.0,"color":0x00E000},
-                "L04": {"power":1.0,"feed":1.0,"color":0xD0D000},
-                "L05": {"power":1.0,"feed":1.0,"color":0xFF8000},
-                "L06": {"power":1.0,"feed":1.0,"color":0x00E0E0},
-                "L07": {"power":1.0,"feed":1.0,"color":0xFF00FF},
-                "L08": {"power":1.0,"feed":1.0,"color":0xB4B4B4},
-                "L09": {"power":1.0,"feed":1.0,"color":0x0000A0},
-                "L10": {"power":1.0,"feed":1.0,"color":0xA00000},
-                "L11": {"power":1.0,"feed":1.0,"color":0x00A000},
-                "L12": {"power":1.0,"feed":1.0,"color":0xA0A000},
-                "L13": {"power":1.0,"feed":1.0,"color":0xC08000},
-                "L14": {"power":1.0,"feed":1.0,"color":0x00A0FF},
-                "L15": {"power":1.0,"feed":1.0,"color":0xA000A0},
-                "L16": {"power":1.0,"feed":1.0,"color":0x808080},
-                "L17": {"power":1.0,"feed":1.0,"color":0x7D87B9},
-                "L18": {"power":1.0,"feed":1.0,"color":0xBB7784},
-                "L19": {"power":1.0,"feed":1.0,"color":0x4A6FE3},
-                "L20": {"power":1.0,"feed":1.0,"color":0xD33F6A},
-                "L21": {"power":1.0,"feed":1.0,"color":0x8CD78C},
-                "L22": {"power":1.0,"feed":1.0,"color":0xF0B98D},
-                "L23": {"power":1.0,"feed":1.0,"color":0xF6C4E1},
-                "L24": {"power":1.0,"feed":1.0,"color":0xFA9ED4},
-                "L25": {"power":1.0,"feed":1.0,"color":0x500A78},
-                "L26": {"power":1.0,"feed":1.0,"color":0xB45A00},
-                "L27": {"power":1.0,"feed":1.0,"color":0x004754},
-                "L28": {"power":1.0,"feed":1.0,"color":0x86FA88},
-                "L29": {"power":1.0,"feed":1.0,"color":0xFFDB66},
-                "T1":  {"power":0.0,"feed":0.0,"color":0xF36926},
-                "T2":  {"power":0.0,"feed":0.0,"color":0x0C96D9}
-            }
-        }
-
+        color_table = [
+            {"label":"L00","type":"ColorTable",
+             "property":{"power":1.0,"feed":1.0,"color":0x000000}},
+            {"label":"L01","type":"ColorTable",
+             "property":{"power":1.0,"feed":1.0,"color":0x0000FF}},
+            {"label":"L02","type":"ColorTable",
+             "property":{"power":1.0,"feed":1.0,"color":0xFF0000}},
+            {"label":"L03","type":"ColorTable",
+             "property":{"power":1.0,"feed":1.0,"color":0x00E000}},
+            {"label":"L04","type":"ColorTable",
+             "property":{"power":1.0,"feed":1.0,"color":0xD0D000}},
+            {"label":"L05","type":"ColorTable",
+             "property":{"power":1.0,"feed":1.0,"color":0xFF8000}},
+            {"label":"L06","type":"ColorTable",
+             "property":{"power":1.0,"feed":1.0,"color":0x00E0E0}},
+            {"label":"L07","type":"ColorTable",
+             "property":{"power":1.0,"feed":1.0,"color":0xFF00FF}},
+            {"label":"L08","type":"ColorTable",
+             "property":{"power":1.0,"feed":1.0,"color":0xB4B4B4}},
+            {"label":"L09","type":"ColorTable",
+             "property":{"power":1.0,"feed":1.0,"color":0x0000A0}},
+            {"label":"L10","type":"ColorTable",
+             "property":{"power":1.0,"feed":1.0,"color":0xA00000}},
+            {"label":"L11","type":"ColorTable",
+             "property":{"power":1.0,"feed":1.0,"color":0x00A000}},
+            {"label":"L12","type":"ColorTable",
+             "property":{"power":1.0,"feed":1.0,"color":0xA0A000}},
+            {"label":"L13","type":"ColorTable",
+             "property":{"power":1.0,"feed":1.0,"color":0xC08000}},
+            {"label":"L14","type":"ColorTable",
+             "property":{"power":1.0,"feed":1.0,"color":0x00A0FF}},
+            {"label":"L15","type":"ColorTable",
+             "property":{"power":1.0,"feed":1.0,"color":0xA000A0}},
+            {"label":"L16","type":"ColorTable",
+             "property":{"power":1.0,"feed":1.0,"color":0x808080}},
+            {"label":"L17","type":"ColorTable",
+             "property":{"power":1.0,"feed":1.0,"color":0x7D87B9}},
+            {"label":"L18","type":"ColorTable",
+             "property":{"power":1.0,"feed":1.0,"color":0xBB7784}},
+            {"label":"L19","type":"ColorTable",
+             "property":{"power":1.0,"feed":1.0,"color":0x4A6FE3}},
+            {"label":"L20","type":"ColorTable",
+             "property":{"power":1.0,"feed":1.0,"color":0xD33F6A}},
+            {"label":"L21","type":"ColorTable",
+             "property":{"power":1.0,"feed":1.0,"color":0x8CD78C}},
+            {"label":"L22","type":"ColorTable",
+             "property":{"power":1.0,"feed":1.0,"color":0xF0B98D}},
+            {"label":"L23","type":"ColorTable",
+             "property":{"power":1.0,"feed":1.0,"color":0xF6C4E1}},
+            {"label":"L24","type":"ColorTable",
+             "property":{"power":1.0,"feed":1.0,"color":0xFA9ED4}},
+            {"label":"L25","type":"ColorTable",
+             "property":{"power":1.0,"feed":1.0,"color":0x500A78}},
+            {"label":"L26","type":"ColorTable",
+             "property":{"power":1.0,"feed":1.0,"color":0xB45A00}},
+            {"label":"L27","type":"ColorTable",
+             "property":{"power":1.0,"feed":1.0,"color":0x004754}},
+            {"label":"L28","type":"ColorTable",
+             "property":{"power":1.0,"feed":1.0,"color":0x86FA88}},
+            {"label":"L29","type":"ColorTable",
+             "property":{"power":1.0,"feed":1.0,"color":0xFFDB66}},
+            {"label":"T1","type":"ColorTable",
+             "property":{"power":1.0,"feed":1.0,"color":0xF36926}},
+            {"label":"T2","type":"ColorTable",
+             "property":{"power":1.0,"feed":1.0,"color":0x0C96D9}},
+        ]
         return color_table
 
     def gen_tst_config(self):
@@ -143,7 +173,8 @@ class MachineConfig:
              },
         ]
 
-        cfg.append(self.gen_color_table())
+        for c in self.gen_color_table():
+            cfg.append(c)
 
         return cfg
 
@@ -185,9 +216,8 @@ class MachineConfig:
         else:
             return default[label]
 
-    def set_working(self, default):
-        #...
-        print("FIXME: not implemented yet.")
+    def set_working(self, config):
+        self._working = config
         return
 
     def get_types(self):
@@ -205,12 +235,13 @@ class MachineConfig:
 
     def get_sublabel(self, label, value):
         dicts = [x for x in self._config if x["type"]==label]
-        print("??? label: '%s'  value: '%s'   dicts: %s"%(label,value,dicts))
         values = [x[value] for x in dicts]
-        print("    values:",values)
         return values
 
-    def working_config(self, label="default"):
+    def working_config(self):
+        return self._working
+    
+    def gen_working(self, label="default"):
         ncfg = {}
 
         dcfg = self.get_sublabel(label,"property")[0]
@@ -224,7 +255,14 @@ class MachineConfig:
                 for tk in tcfg[i].keys():
                     ncfg[tk] = tcfg[i][tk]
 
-        self._working = ncfg
+        return ncfg
+
+    def modify_working_config(self, label="default"):
+        dcfg = self.get_value_by_label(label, "property")
+
+        for d in dcfg:
+            for l in d.keys():
+                self._working[l] = d[l]
         
         return self._working
 
@@ -291,14 +329,12 @@ class MachineConfig:
 
         """
         ct = self.gen_color_table()
-        modified = []
-        for d in self._config:
-            if d["label"]=="ColorTable":
-                #print(d)
-                d["property"] = ct["property"]
-            modified.append(d)
 
-        self._config = modified
+        for d in ct:
+            self.set_property_value(d["label"], "feed",  d["property"]["feed"])
+            self.set_property_value(d["label"], "power", d["property"]["power"])
+            self.set_property_value(d["label"], "color", d["property"]["color"])
+
 
     def scale_value(self, label1, label2, cfg=None):
         if cfg is None:
@@ -307,7 +343,7 @@ class MachineConfig:
         return val
 
     def color(self, tag):
-        return self.get_subproperty_value("ColorTable", tag, "color")[0]
+        return self.get_property_value(tag, "color")[0]
 
     # color2str - return the working labled color as an OpenSCAD
     #   compatible string representation of the hex value starting with a
@@ -317,23 +353,23 @@ class MachineConfig:
 
     # powermap - return the working labled power
     def power(self, tag):
-        return self.get_subproperty_value("ColorTable", tag, "power")[0]
+        return self.get_property_value(tag, "power")[0]
 
     # feedmap - return the working labled feed
     def feed(self, tag):
-        return self.get_subproperty_value("ColorTable", tag, "feed")[0]
+        return self.get_property_value(tag, "feed")[0]
 
     # setpower - overwrite the working labeled power
     def set_power(self, tag, val):
-        return self.set_subproperty_value("ColorTable", rag, "power", val)
+        return self.set_property_value(tag, "power", val)
 
     # setfeed - overwrite the working labeled feed
-    def set_feed(self, key, val):
-        return self.set_subproperty_value("ColorTable", rag, "feed", val)
+    def set_feed(self, tag, val):
+        return self.set_property_value(tag, "feed", val)
 
     # setcolor - overwrite the working labeled color
-    def set_color(self, key, val):
-        return self.set_subproperty_value("ColorTable", rag, "color", val)
+    def set_color(self, tag, val):
+        return self.set_property_value(tag, "color", val)
 
     def gen_color(self, red=-1,green=-1,blue=-1,power=-1,feed=-1):
         if (red!=-1 or green!=-1 or blue!=-1) and (power!=-1 or feed!=-1):
@@ -350,4 +386,7 @@ class MachineConfig:
 
     def gen_color2str(red=-1,green=-1,blue=-1,power=-1,feed=-1):
         return "#{:X}".format(self.gen_color(red,green,blue,power,feed))
+
+    def gen_color2hex(red=-1,green=-1,blue=-1,power=-1,feed=-1):
+        return "0x{:X}".format(self.gen_color(red,green,blue,power,feed))
 
