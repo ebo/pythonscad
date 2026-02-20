@@ -58,7 +58,8 @@ def reset_default_colormap():
 #   compatible string representation of the hex value starting with a
 #   '#'
 def colormap2str(key):
-    return "#{:06X}".format(int(colormap(key)))
+    color = int(colormap(key))
+    return f"#{color:08X}"
 
 # colormap - return the working labled color hex value
 def colormap(key):
@@ -105,5 +106,5 @@ def gen_color(power=-1,feed=-1):
 def gen_color2str(power=-1,feed=-1):
     color = gen_color(power,feed)
     
-    return "#{:06X}".format(color)
+    return f"#{color:08X}"
 
