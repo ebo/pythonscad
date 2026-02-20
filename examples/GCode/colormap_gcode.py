@@ -35,7 +35,7 @@ engraved_object = plate - positioned_text
 # Use the direct power/feed method.
 
 # Mark the text as engraved (power=50% and feed=100% max)
-engrave_color = gen_color2str(power=0.5,feed=1.0)
+engrave_color = gen_color2str(power=500,feed=20000)
 print("Engrave at:",engrave_color)
 
 text_3d_2 = text_3d
@@ -44,8 +44,8 @@ text_3d_2 = text_3d_2.color(engrave_color)
 text_3d_2 = text_3d_2.translate([38,50,10])
 text_3d_2.show()
 
-# Mark the backplate as cut (power=100% and feed=25% max)
-cut_color = gen_color2str(power=1.0,feed=0.25)
+# Mark the backplate as cut (power=100% and feed=400mm/min)
+cut_color = gen_color2str(power=1000,feed=400)
 print("Cut at:",cut_color)
 
 plate_2 = plate
@@ -59,11 +59,11 @@ plate_2.show()
 #
 # modify the color-table entries for cut and engrave
 #  cut:
-set_powermap("L01",0.9)
-set_feedmap("L01",0.4)
+set_powermap("L01",900)
+set_feedmap("L01",4000)
 #  engrave
-set_powermap("L02",0.35)
-set_feedmap("L02",0.8)
+set_powermap("L02",350)
+set_feedmap("L02",6000)
 
 # engrave the second part
 engrave_color = gen_color2str(power=powermap("L02"),feed=feedmap("L02"))
