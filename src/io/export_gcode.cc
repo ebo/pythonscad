@@ -80,22 +80,18 @@ void output_gcode_pars(std::ostream& output, int gnum, double x, double y, doubl
 
 static double color_to_parm(const Color4f color, const double max, const int pos, const int dynamic)
 {
-  float r,g,b,a;
+  int r,g,b,a;
   double parm;
 
   color.getRgba(r,g,b,a);
+  double power = double(uint(r)) * 4.0;
+  double feed  = double(uint(g)<<8) + double(b);
   switch (pos) {
-    case 0: // (red) power
-      parm = (r > 0.0) ? r*max : max;
+    case 0: // power
+      parm = (power <= max) ? power : max;
       break;
-    case 1: // (green) feed/speed
-      parm = (g > 0.0) ? g*max : max;
-      break;
-   case 2: // (blue) unused at the moment, but stubed in
-      parm = (b > 0.0) ? b*max : max;
-      break;
-    case 3: // (alpha) unused at the moment, but stubed in
-      parm = (a > 0.0) ? a*max : max;
+    case 1: // feed/speed
+      parm = (feed <= max) ? feed : max;
       break;
     default:
       fprintf(stderr, "Internal Error: invalid colar param position.\n");
