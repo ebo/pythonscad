@@ -179,10 +179,10 @@ static void append_gcode(boost::property_tree::ptree pt, const std::shared_ptr<c
     }
   } else if (const auto poly = std::dynamic_pointer_cast<const Polygon2d>(geom)) {
     append_gcode(pt, *poly, output, exportInfo, lasermode);
-  } else if (std::dynamic_pointer_cast<const PolySet>(geom)) {  // NOLINT(bugprone-branch-clone)
-    assert(false && "Unsupported file format");
-  } else {  // NOLINT(bugprone-branch-clone)
-    assert(false && "Export as SVG for this geometry type is not supported");
+  } else if (std::dynamic_pointer_cast<const PolySet>(geom)) {
+    std::cerr << std::endl << "ERROR(append_gcode): export_gcode cannot process 3D objects" << std::endl << std::flush;
+  } else {
+    std::cerr << std::endl << "ERROR(append_gcode): export_gcode cannot export this geometry type"<< std::endl << std::flush;
   }
 }
 
@@ -193,6 +193,12 @@ boost::property_tree::ptree _machineconfig_settings_;
 void export_gcode(const std::shared_ptr<const Geometry>& geom, std::ostream& output,
                   const ExportInfo& exportInfo)
 {
+  if (NULL == geom) {
+    std::cerr << std::endl << "ERROR(export_gcode): NULL geometry in export_gcode." << std::endl;
+    std::cerr << "       export aborted." << std::endl << std::endl;
+    return;
+  }
+
   setlocale(LC_NUMERIC, "C");  // Ensure radix is . (not ,) in output
   BoundingBox bbox = geom->getBoundingBox();
 
@@ -206,7 +212,7 @@ void export_gcode(const std::shared_ptr<const Geometry>& geom, std::ostream& out
 
     // handle cases where MachineConfig sets an invalid lasermode
     if ((0 != lasermode) && (1 != lasermode)) {
-      std::cerr << "\nWarning: invlaid lasermode (" << lasermode << ") obtained from MachineConfig.\n\n";
+      std::cerr << std::endl << "Warning: invlaid lasermode (" << lasermode << ") obtained from MachineConfig." << std::endl <<  std::endl;
       lasermode = options->lasermode;
     }
   } catch (const boost::property_tree::ptree_error& e) {
