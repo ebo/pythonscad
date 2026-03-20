@@ -1,5 +1,5 @@
 import os
-import json
+### FIXME: import json
 from openscad import *
 
 """
@@ -12,7 +12,7 @@ class MachineConfig:
     _config = {}  # the config as read in from the config file
     _working = {} # the, possibly modified, collapsed working config
 
-    def __init__(self, name="PythonSCAD.json"):
+    def __init__(self, name="PythonSCAD.psc"):
         try:
             self._config = self.read(name)
         except:
@@ -108,13 +108,14 @@ class MachineConfig:
         self.register("T2","ColorTable",
                       {"power":1,"feed":1,"color":0x0C96D9FF})
 
-    def read(self, name="PythonSCAD.json"):
+    def read(self, name="PythonSCAD.psc"):
         name = self.configfile(name)
         with open(name, 'r', encoding='utf-8') as f:
-            cfg = json.loads(f.read())
+            ### FIXMe; cfg = json.loads(f.read())
+            cfg = ast.literal_eval(f.read())
             return cfg
         
-    def write(self, config=None, name="PythonSCAD.json", backup=None):
+    def write(self, config=None, name="PythonSCAD.psc", backup=None):
         name = self.configfile(name)
 
         if backup is not None:
@@ -124,7 +125,8 @@ class MachineConfig:
         if config is None:
             config = self._config
 
-        jstr = json.dumps(config, indent=4)
+        ### FIXME: jstr = json.dumps(config, indent=4)
+        jstr = str(config)
 
         if jstr is not None:
             with open(name,'w') as fout:
@@ -203,7 +205,7 @@ class MachineConfig:
         except:
             pass
 
-    def configfile(self, name="PythonSCAD.json"):
+    def configfile(self, name="PythonSCAD.psc"):
         name = os.path.expanduser(name)
         xdg = os.getenv("XDG_CONFIG_HOME")
         home = os.getenv("HOME")
