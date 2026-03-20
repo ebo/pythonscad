@@ -434,7 +434,7 @@ Outline2d python_getprofile(void *v_cbfunc, int fn, double arg)
 {
   PyObject *cbfunc = reinterpret_cast<PyObject *>(v_cbfunc);
   Outline2d result;
-  if (pythonInitDict == nullptr) initPython(PlatformUtils::applicationPath(), "", 0.0);
+  if (pythonInitDict == nullptr) initPython(PlatformUtils::applicationPath(), "", nullptr);
   PyObject *args = PyTuple_Pack(1, PyFloat_FromDouble(arg));
   PyObject *polygon = PyObject_CallObject(cbfunc, args);
   Py_XDECREF(args);
@@ -491,10 +491,12 @@ PyObject *python_fromopenscad(const Value& val)
 {
   switch (val.type()) {
   case Value::Type::UNDEFINED: Py_RETURN_NONE;
-  case Value::Type::BOOL:      if(val.toBool()) Py_RETURN_TRUE; else Py_RETURN_FALSE;
-  case Value::Type::NUMBER:    return PyFloat_FromDouble(val.toDouble());
-  case Value::Type::STRING:    return PyUnicode_FromString(val.toString().c_str());
-  case Value::Type::VECTOR:    {
+  case Value::Type::BOOL:
+    if (val.toBool()) Py_RETURN_TRUE;
+    else Py_RETURN_FALSE;
+  case Value::Type::NUMBER: return PyFloat_FromDouble(val.toDouble());
+  case Value::Type::STRING: return PyUnicode_FromString(val.toString().c_str());
+  case Value::Type::VECTOR: {
     const VectorType& vec = val.toVector();
     PyObject *result = PyList_New(vec.size());
     for (size_t j = 0; j < vec.size(); j++) PyList_SetItem(result, j, python_fromopenscad(vec[j]));
@@ -711,7 +713,7 @@ void openscad_object_callback(PyObject *obj)
   }
 }
 #endif
-void initPython(const std::string& binDir, const std::string& scriptpath, double time)
+void initPython(const std::string& binDir, const std::string& scriptpath, const RenderVariables *r)
 {
   static bool alreadyTried = false;
   if (alreadyTried) return;
@@ -861,7 +863,25 @@ void initPython(const std::string& binDir, const std::string& scriptpath, double
     }
   }
   std::ostringstream stream;
-  stream << "t=" << time << "\nphi=" << 2 * G_PI * time << "\n" << commandline_commands << "\n";
+  if (r != nullptr) {
+    stream << "preview=" << (r->preview ? "True" : "False") << "\n";
+
+    stream << "t=" << r->time << "\n";
+    stream << "phi=" << 2 * G_PI * r->time << "\n";
+
+    const auto vpr = r->camera.getVpr();
+    stream << "vpr=[" << vpr.x() << "," << vpr.y() << "," << vpr.z() << "]\n";
+
+    const auto vpt = r->camera.getVpt();
+    stream << "vpt=[" << vpt.x() << "," << vpt.y() << "," << vpt.z() << "]\n";
+
+    const auto vpd = r->camera.zoomValue();
+    stream << "vpd=" << vpd << "\n";
+
+    const auto vpf = r->camera.fovValue();
+    stream << "vpf=" << vpf << "\n";
+  }
+  stream << commandline_commands << "\n";
   PyRun_String(stream.str().c_str(), Py_file_input, pythonInitDict.get(), pythonInitDict.get());
   customizer_parameters_finished = customizer_parameters;
   customizer_parameters.clear();
@@ -1013,7 +1033,7 @@ PyObject *PyOpenSCADItemRef_get_value(PyOpenSCADItemRef *self, void *closure)
 
   std::shared_ptr<AbstractNode> parnode =
     PyOpenSCADObjectToNode(reinterpret_cast<PyObject *>(self->parent), &dummydict);
-  if (self->index < 0 || self->index >= parnode->children.size()) {
+  if (self->index >= parnode->children.size()) {
     PyErr_SetString(PyExc_IndexError, "child index out of range");
     return NULL;
   }
@@ -1025,7 +1045,7 @@ int PyOpenSCADItemRef_set_value(PyOpenSCADItemRef *self, PyObject *value, void *
   PyObject *dummydict;
   std::shared_ptr<AbstractNode> parnode =
     PyOpenSCADObjectToNode(reinterpret_cast<PyObject *>(self->parent), &dummydict);
-  if (self->index < 0 || self->index >= parnode->children.size()) {
+  if (self->index >= parnode->children.size()) {
     PyErr_SetString(PyExc_IndexError, "child index out of range");
     return -1;
   }
@@ -1351,7 +1371,7 @@ int Py_RunMain_ipython(void)
 
 void ipython(void)
 {
-  initPython(PlatformUtils::applicationPath(), "", 0.0);
+  initPython(PlatformUtils::applicationPath(), "", nullptr);
   Py_RunMain_ipython();
   return;
 }

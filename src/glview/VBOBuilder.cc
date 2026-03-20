@@ -527,6 +527,26 @@ void VBOBuilder::create_edges(const Polygon2d& polygon, const Transform3d& m, co
     vertex_states.emplace_back(std::move(line_loop));
     addAttributePointers(last_size);
   }
+
+  for (const Outline2d& o : polygon.untransformedPolylines()) {
+    const auto last_size = verticesOffset();
+    size_t elements_offset = 0;
+    if (useElements()) {
+      elements_offset = elementsOffset();
+      elementsMap().clear();
+    }
+    for (const Vector2d& v : o.vertices) {
+      const Vector3d p0 = uniqueMultiply(vert_mult_map, Vector3d(v[0], v[1], 0.0), m);
+      createVertex({p0}, {}, o.color, 0, 0, o.vertices.size(), true, false);
+    }
+
+    GLenum elements_type = 0;
+    if (useElements()) elements_type = elementsData()->glType();
+    std::shared_ptr<VertexState> line_loop =
+      createVertexState(GL_LINE_STRIP, o.vertices.size(), elements_type, writeIndex(), elements_offset);
+    vertex_states.emplace_back(std::move(line_loop));
+    addAttributePointers(last_size);
+  }
 }
 
 void VBOBuilder::create_polygons(const PolySet& ps, const Transform3d& m, const Color4f& color)

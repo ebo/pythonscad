@@ -117,7 +117,9 @@
 #include "geometry/GeometryEvaluator.h"
 #include "glview/PolySetRenderer.h"
 #include "glview/RenderSettings.h"
+#if not defined(USE_POLYSET_FOR_CGAL)
 #include "glview/cgal/CGALRenderer.h"
+#endif
 #include "glview/preview/CSGTreeNormalizer.h"
 #include "glview/preview/ThrownTogetherRenderer.h"
 #include "gui/AboutDialog.h"
@@ -231,7 +233,6 @@ int curl_download(const std::string& url, const std::string& path)
 }
 #endif  // ifdef ENABLE_PYTHON
 
-
 // Global application state
 unsigned int GuiLocker::guiLocked = 0;
 
@@ -320,7 +321,7 @@ void MainWindow::addMenuItemCB(QString callback)
   if (content.size() == 0) return;
   const auto& venv = venvBinDirFromSettings();
   const auto& binDir = venv.empty() ? PlatformUtils::applicationPath() : venv;
-  initPython(binDir, "", 0.0);
+  initPython(binDir, "", nullptr);
   evaluatePython(content);
   evaluatePython(cbstr);
   finishPython();
@@ -395,7 +396,7 @@ void MainWindow::customSetup(void)
   connect(this->addmenu_mapper, SIGNAL(mapped(QString)), this, SLOT(addMenuItemCB(QString)));
   const auto& venv = venvBinDirFromSettings();
   const auto& binDir = venv.empty() ? PlatformUtils::applicationPath() : venv;
-  initPython(binDir, "", 0.0);
+  initPython(binDir, "", nullptr);
   evaluatePython(content);
   addmenuitem_this = this;
   evaluatePython("setup()");
@@ -741,17 +742,6 @@ void MainWindow::addKeyboardShortCut(const QList<QAction *>& actions)
       "%1 &nbsp;<span style=\"color: gray; font-size: small; font-style: italic\">%2</span>");
     action->setToolTip(toolTip.arg(action->toolTip(), shortCut));
   }
-}
-
-/**
- * Update window settings that get overwritten by the restoreState()
- * Qt call. So the values are loaded before the call and restored here
- * regardless of the (potential outdated) serialized state.
- */
-void MainWindow::updateWindowSettings(bool isEditorToolbarVisible, bool isViewToolbarVisible)
-{
-  viewActionHideEditorToolBar->setChecked(!isEditorToolbarVisible);
-  viewActionHide3DViewToolBar->setChecked(!isViewToolbarVisible);
 }
 
 void MainWindow::onAxisChanged(InputEventAxisChanged *)
@@ -2026,7 +2016,14 @@ std::shared_ptr<SourceFile> MainWindow::parseDocument(EditorInterface *editor)
   } else if (editor->language == LANG_PYTHON) {
     const auto& venv = venvBinDirFromSettings();
     const auto& binDir = venv.empty() ? PlatformUtils::applicationPath() : venv;
-    initPython(venv, fnameba.constData(), this->animateWidget->getAnimTval());
+
+    const RenderVariables r = {
+      .preview = this->isPreview,
+      .time = this->animateWidget->getAnimTval(),
+      .camera = qglview->cam,
+    };
+
+    initPython(venv, fnameba.constData(), &r);
     this->activeEditor->resetHighlighting();
     this->activeEditor->parameterWidget->setEnabled(false);
     do {
@@ -2064,6 +2061,12 @@ std::shared_ptr<SourceFile> MainWindow::parseDocument(EditorInterface *editor)
     auto error = evaluatePython(fulltext_py, false);  // add assignments TODO check
     if (error.size() > 0) LOG(message_group::Error, Location::NONE, "", error.c_str());
     finishPython();
+
+    if (renderVarsSet != nullptr) {
+      qglview->cam = renderVarsSet->camera;
+      viewportControlWidget->cameraChanged();
+      renderVarsSet = nullptr;
+    }
     sourceFile = parse(sourceFile, "", fname, fname, false) ? sourceFile : nullptr;
 
   } else  // python not enabled
@@ -2338,6 +2341,9 @@ void MainWindow::actionRenderDone(const std::shared_ptr<const Geometry>& root_ge
     LOG("Rendering finished.");
 
     this->rootGeom = root_geom;
+#if defined(USE_POLYSET_FOR_CGAL)
+    this->geomRenderer = std::make_shared<PolySetRenderer>(this->rootGeom);
+#else
     // Choose PolySetRenderer for PolySet and Polygon2d, and for Manifold since we
     // know that all geometries are convertible to PolySet.
     if (RenderSettings::inst()->backend3D == RenderBackend3D::ManifoldBackend ||
@@ -2347,6 +2353,7 @@ void MainWindow::actionRenderDone(const std::shared_ptr<const Geometry>& root_ge
     } else {
       this->geomRenderer = std::make_shared<CGALRenderer>(this->rootGeom);
     }
+#endif
 
     // Go to CGAL view mode
     viewModeRender();
@@ -2456,6 +2463,24 @@ void MainWindow::rightClick(QPoint position)
       if (step->name() == "root") {
         continue;
       }
+      const bool hasSourceRef = step->modinst && !step->modinst->location().isNone();
+      if (!hasSourceRef) {
+        // Show an entry so the backtrace stays complete; no jump/highlight (no "id", no hover)
+        std::string name;
+        if (step->modinst) {
+          const std::string vname = step->verbose_name();
+          const int first_position = (vname.find("module") == std::string::npos) ? 0 : 7;
+          name = vname.empty() ? step->modinst->name() : vname.substr(first_position);
+        } else {
+          const std::string vname = step->verbose_name();
+          const int first_position = (vname.find("module") == std::string::npos) ? 0 : 7;
+          name = vname.empty() ? "?" : vname.substr(first_position);
+        }
+        ss.str("");
+        ss << name << " (no source reference)";
+        tracemenu.addAction(QString::fromStdString(ss.str()));
+        continue;
+      }
       auto location = step->modinst->location();
       ss.str("");
 
@@ -2542,7 +2567,10 @@ void MainWindow::setSelectionIndicatorStatus(EditorInterface *editor, int nodeIn
   // starts at 1 because we will process this one after later
   for (size_t i = 1; i < stack.size() - 1; i++) {
     const auto& node = stack[i];
-
+    if (!node->modinst || node->modinst->location().isNone()) {
+      level++;
+      continue;
+    }
     auto& location = node->modinst->location();
     if (location.filePath().compare(editor->filepath.toStdString()) != 0) {
       level++;
@@ -2558,6 +2586,9 @@ void MainWindow::setSelectionIndicatorStatus(EditorInterface *editor, int nodeIn
   }
 
   auto& node = stack[0];
+  if (!node->modinst || node->modinst->location().isNone()) {
+    return;
+  }
   auto location = node->modinst->location();
   auto line = location.firstLine();
   auto column = location.firstColumn();
@@ -2579,6 +2610,9 @@ void MainWindow::setSelection(int index)
   const std::shared_ptr<const AbstractNode> selected_node = rootNode->getNodeByID(index, path);
 
   if (!selected_node) return;
+  if (!selected_node->modinst || selected_node->modinst->location().isNone()) {
+    return;
+  }
 
   currentlySelectedObject = index;
 
@@ -4150,7 +4184,6 @@ void MainWindow::setupConsole()
     GlobalPreferences::inst()->getValue("advanced/consoleFontFamily").toString(),
     GlobalPreferences::inst()->getValue("advanced/consoleFontSize").toUInt());
 
-
   const QString version =
     QString("<b>PythonSCAD %1</b>").arg(QString::fromStdString(std::string(openscad_versionnumber)));
   const QString weblink = "<a href=\"https://www.pythonscad.org/\">https://www.pythonscad.org/</a><br>";
@@ -4594,7 +4627,10 @@ void MainWindow::restoreWindowState()
     tabifyDockWidget(errorLogDock, fontListDock);
     tabifyDockWidget(fontListDock, colorListDock);
     tabifyDockWidget(colorListDock, animateDock);
+    parameterDock->hide();
+    viewportControlDock->hide();
     consoleDock->show();
+    consoleDock->raise();
   } else {
 #ifdef Q_OS_WIN
     // Try moving the main window into the display range, this
@@ -4615,7 +4651,6 @@ void MainWindow::restoreWindowState()
 #endif  // ifdef Q_OS_WIN
   }
 
-  updateWindowSettings(isEditorToolbarVisible, is3DViewToolbarVisible);
 }
 
 void MainWindow::openRemainingFiles(const QStringList& filenames)

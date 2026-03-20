@@ -43,6 +43,7 @@ option(USE_MANIFOLD_TRIANGULATOR "Use Manifold's triangulator instead of CGAL's"
 option(USE_MANIFOLD_MINKOWSKI "Use Manifold's Minkowski instead of CGAL's" OFF)
 option(USE_BUILTIN_MANIFOLD "Use manifold from submodule" ON)
 option(USE_BUILTIN_CLIPPER2 "Use Clipper2 from submodule" ON)
+option(USE_POLYSET_FOR_CGAL "Force CGAL backend to use PolySetRenderer instead of CGALRenderer." OFF)
 option(SNAPSHOT "Create dev snapshot, uses nightly icons" OFF)
 option(HEADLESS "Build without GUI frontend" OFF)
 option(USE_QT6 "Build the GUI with Qt6" ON)
@@ -73,6 +74,7 @@ option(ALLOW_BUNDLED_HIDAPI "Allow usage of bundled HIDAPI library (Windows only
 option(ENABLE_PYTHON "Enable experimental Python Interpreter" ON)
 option(PYTHON_VERSION "Specify Exact Python Version" "")
 option(ENABLE_LIBFIVE "Enable libfive Library" OFF)
+option(ENABLE_CDR "Enable CorelDraw support" ON)
 option(USE_BUILTIN_LIBFIVE "Use libfive from submodule." ON)
 option(PORTABLE_BINARY "Build portable binary without -march=native (for distribution)" OFF)
 option(BUILD_SHARED_LIBS "Build shared library" OFF)
@@ -662,6 +664,7 @@ if(ENABLE_PYTHON)
       # available on all target machines.
       if(PORTABLE_BINARY)
         set(MARCH_SUPPORTED OFF CACHE BOOL "Disable -march=native for portable builds" FORCE)
+        set(ENABLE_DEBUG OFF CACHE BOOL "Disable debug symbols for portable builds" FORCE)
       endif()
       # Note: add_subdirectory(libfive) is deferred to after Python3 is found,
       # so we can define PYTHON_SITE_PACKAGES_DIR using modern sysconfig
@@ -997,6 +1000,22 @@ elseif(ENABLE_HIDAPI)
 else()
   # OFF: explicitly disabled
   message(STATUS "HIDAPI: disabled per user request")
+endif()
+if(ENABLE_CDR)
+  find_package(PkgConfig REQUIRED)
+  pkg_check_modules(LIBCDR IMPORTED_TARGET libcdr-0.1)
+  pkg_check_modules(LIBREVENGE IMPORTED_TARGET librevenge-0.0)
+  pkg_check_modules(LIBREVENGE_STREAM IMPORTED_TARGET librevenge-stream-0.0)
+
+  if(LIBCDR_FOUND AND LIBREVENGE_FOUND AND LIBREVENGE_STREAM_FOUND)
+    set(IMPORT_CDR_SOURCES src/io/import_cdr.cc)
+    target_compile_definitions(OpenSCADLibInternal PRIVATE ENABLE_CDR)
+
+    target_link_libraries(OpenSCADLibInternal PRIVATE PkgConfig::LIBCDR)
+
+    target_link_libraries(OpenSCADLibInternal PRIVATE PkgConfig::LIBREVENGE)
+    target_link_libraries(OpenSCADLibInternal PRIVATE PkgConfig::LIBREVENGE_STREAM)
+  endif()
 endif()
 
 if(ENABLE_SPNAV STREQUAL "AUTO")
@@ -1589,6 +1608,9 @@ if(ENABLE_MANIFOLD)
   if (USE_MANIFOLD_MINKOWSKI)
     target_compile_definitions(OpenSCADLibInternal PUBLIC USE_MANIFOLD_MINKOWSKI)
   endif()
+  if (USE_POLYSET_FOR_CGAL)
+    target_compile_definitions(OpenSCADLibInternal PUBLIC USE_POLYSET_FOR_CGAL)
+  endif()
 endif()
 
 #
@@ -1602,7 +1624,8 @@ if(NULLGL)
     src/glview/OffscreenView.cc
     src/glview/OffscreenContextNULL.cc
     src/io/export_png.cc
-    src/io/imageutils.cc)
+    src/io/imageutils.cc
+    ${IMPORT_CDR_SOURCES})
 else()
   set(OFFSCREEN_SOURCES
     src/glview/OpenGLContext.cc
@@ -1616,13 +1639,17 @@ else()
     src/glview/GLView.cc
     src/glview/hershey.cc
     src/glview/OffscreenView.cc
-    src/glview/cgal/CGALRenderer.cc
     src/glview/PolySetRenderer.cc
     src/glview/preview/OpenCSGRenderer.cc
     src/glview/preview/ThrownTogetherRenderer.cc
     src/io/export_png.cc
     src/io/imageutils.cc
+    ${IMPORT_CDR_SOURCES}
     ${GLEW_SOURCES})
+  if(NOT USE_POLYSET_FOR_CGAL)
+    list(APPEND OFFSCREEN_SOURCES
+      src/glview/cgal/CGALRenderer.cc)
+  endif()
 endif()
 
 

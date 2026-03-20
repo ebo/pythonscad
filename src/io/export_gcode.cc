@@ -40,17 +40,12 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/foreach.hpp>
 
-void find_colormap_from_value(const boost::property_tree::ptree& pt, const unsigned int color,
-                              std::string& label, int& power, int& feed)
+void find_colormap_from_value(const boost::property_tree::ptree& pt, const ExportGcodeOptions& options,
+                              const unsigned int color, std::string& label, int& power, int& feed)
 {
   // set the default return value for not found pass through.
-  power = feed = -1;
-
-  if (pt.empty()) {
-    std::cerr << "In find_colormap_from_value: ";
-    std::cerr << "\"" << pt.data() << "\"" << std::endl;
-    return;
-  }
+  power = options.laserpower;
+  feed = options.feedrate;
 
   BOOST_FOREACH (const boost::property_tree::ptree::value_type& v, pt) {
     try {
@@ -113,7 +108,7 @@ void output_gcode_pars(std::ostream& output, int gnum, double x, double y, doubl
 }
 
 static double color_to_parm(const boost::property_tree::ptree& pt, const Color4f color, const int pos,
-                            const int dynamic)
+                            const struct ExportGcodeOptions& options)
 {
   int r, g, b, a;
   double parm;
@@ -128,18 +123,18 @@ static double color_to_parm(const boost::property_tree::ptree& pt, const Color4f
 
   switch (pos) {
   case 0:  // power
-    if (dynamic == 1) {
+    if (options.lasermode == 1) {
       parm = double(color_val >> 22);
     } else {
-      find_colormap_from_value(pt, color_val, label, ipower, ifeed);
+      find_colormap_from_value(pt, options, color_val, label, ipower, ifeed);
       parm = double(ipower);
     }
     break;
   case 1:  // feed/speed
-    if (dynamic == 1) {
+    if (options.lasermode == 1) {
       parm = double(((color_val & 0x3FFFFF) >> 8) | (((~(unsigned int)(a)) & 0xFF) << 16));
     } else {
-      find_colormap_from_value(pt, color_val, label, ipower, ifeed);
+      find_colormap_from_value(pt, options, color_val, label, ipower, ifeed);
       parm = double(ifeed);
     }
     break;
@@ -154,16 +149,46 @@ static void append_gcode(boost::property_tree::ptree pt, const Polygon2d& poly, 
 {
   auto options = exportInfo.optionsGcode;
 
-  for (const auto& o : poly.outlines()) {
-    const Eigen::Vector2d& p0 = o.vertices[0];
-    const double laserpower = color_to_parm(pt, o.color, 0, lasermode);
-    const double feedrate = color_to_parm(pt, o.color, 1, lasermode);
+  double feedAddX = 0, feedAddY = 0;
 
-    output_gcode_pars(output, 0, p0.x(), p0.y(), NAN, NAN);
+  try {
+    feedAddX = pt.get<double>("default.property.feedAddX");
+  } catch (const boost::property_tree::ptree_error& e) {
+  }
+
+  try {
+    feedAddY = pt.get<double>("default.property.feedAddY");
+  } catch (const boost::property_tree::ptree_error& e) {
+  }
+  printf("%g %g\n", feedAddX, feedAddY);
+
+  for (const auto& o : poly.outlines()) {
+    Eigen::Vector2d pold = o.vertices[0];
+    const double laserpower = color_to_parm(pt, o.color, 0, *options);
+    const double feedrate = color_to_parm(pt, o.color, 1, *options);
+
+    output_gcode_pars(output, 0, pold.x(), pold.y(), NAN, NAN);
     output_gcode_pars(output, -1, NAN, NAN, NAN, laserpower);
     int n = o.vertices.size();
     for (unsigned int idx = 1; idx <= n; ++idx) {
       const Eigen::Vector2d& p = o.vertices[idx % n];
+      Vector2d midpt = (p + pold) / 2.0;
+      double feed_eff = feedrate + feedAddX * midpt[0] + feedAddY * midpt[1];
+      output_gcode_pars(output, 1, p.x(), p.y(), feed_eff, laserpower);
+      pold = p;
+    }
+    output_gcode_pars(output, -1, NAN, NAN, NAN, 0);
+  }
+  for (const auto& o : poly.polylines()) {
+    const Eigen::Vector2d& p0 = o.vertices[0];
+    const double laserpower = color_to_parm(pt, o.color, 0, *options);
+    const double feedrate = color_to_parm(pt, o.color, 1, *options);
+
+    output_gcode_pars(output, 0, p0.x(), p0.y(), NAN, NAN);
+    output_gcode_pars(output, -1, NAN, NAN, NAN, laserpower);
+    int n = o.vertices.size();
+    for (unsigned int idx = 1; idx < n; ++idx) {
+      const Eigen::Vector2d& p = o.vertices[idx];
       output_gcode_pars(output, 1, p.x(), p.y(), feedrate, laserpower);
     }
     output_gcode_pars(output, -1, NAN, NAN, NAN, 0);
@@ -179,10 +204,14 @@ static void append_gcode(boost::property_tree::ptree pt, const std::shared_ptr<c
     }
   } else if (const auto poly = std::dynamic_pointer_cast<const Polygon2d>(geom)) {
     append_gcode(pt, *poly, output, exportInfo, lasermode);
-  } else if (std::dynamic_pointer_cast<const PolySet>(geom)) {  // NOLINT(bugprone-branch-clone)
-    assert(false && "Unsupported file format");
-  } else {  // NOLINT(bugprone-branch-clone)
-    assert(false && "Export as SVG for this geometry type is not supported");
+  } else if (std::dynamic_pointer_cast<const PolySet>(geom)) {
+    std::cerr << std::endl
+              << "ERROR(append_gcode): export_gcode cannot process 3D objects" << std::endl
+              << std::flush;
+  } else {
+    std::cerr << std::endl
+              << "ERROR(append_gcode): export_gcode cannot export this geometry type" << std::endl
+              << std::flush;
   }
 }
 
